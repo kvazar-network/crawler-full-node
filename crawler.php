@@ -1,98 +1,189 @@
 <?php
 
-require_once('config.php');
-require_once('library/mysql.php');
-require_once('library/keva.php');
-require_once('library/hash.php');
-require_once('library/base58.php');
-require_once('library/base58check.php');
-require_once('library/crypto.php');
+$semaphore = sem_get(1);
 
-$db   = new MySQL();
-$node = new Keva();
+if (false !== sem_acquire($semaphore, 1)) {
 
-$node->host     = KEVA_HOST;
-$node->username = KEVA_USERNAME;
-$node->password = KEVA_PASSWORD;
-$node->port     = KEVA_PORT;
+  require_once('config.php');
+  require_once('library/mysql.php');
+  require_once('library/kevacoin.php');
+  require_once('library/hash.php');
+  require_once('library/base58.php');
+  require_once('library/base58check.php');
+  require_once('library/crypto.php');
+  require_once('library/helper.php');
 
-$blockLast  = $db->getLastBlock();
-$blockTotal = $node->getblockcount();
+  $db       = new MySQL(DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD);
+  $kevaCoin = new KevaCoin(KEVA_PROTOCOL, KEVA_HOST, KEVA_PORT, KEVA_USERNAME, KEVA_PASSWORD);
 
-$response = [];
+  $blockLast  = $db->getLastBlock();
+  $blockTotal = $kevaCoin->getblockcount();
 
-if ($blockTotal > $blockLast) {
+  if (!$blockTotal) {
+    echo "API connection error.\n";
+    exit;
+  }
 
-  for ($blockCurrent = $blockLast; $blockCurrent <= $blockLast + STEP_BLOCK_LIMIT; $blockCurrent++) {
+  $response = [];
 
-    if ($blockHash = $node->getblockhash($blockCurrent)) {
+  if (CRAWLER_DEBUG) {
+    echo "scanning blockhain...\n";
+  }
 
-      $blockData = $node->getblock($blockHash);
+  for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_LIMIT; $blockCurrent++) {
 
-      if (!$blockId = $db->getBlock($blockCurrent)) {
-           $blockId = $db->addBlock($blockCurrent);
+    if ($blockCurrent > $blockTotal) {
+
+      if (CRAWLER_DEBUG) {
+        echo "database is up to date.\n";
       }
 
-      foreach ($blockData['tx'] as $transaction) {
+      break;
+    }
 
-        $transactionRaw = $node->getrawtransaction($transaction, 1);
+    if (CRAWLER_DEBUG) {
+      echo sprintf("reading block %s\n", $blockCurrent);
+    }
 
-        foreach($transactionRaw['vout'] as $vout) {
+    if (!$blockHash = $kevaCoin->getblockhash($blockCurrent)) {
 
-          $asmArray = explode(' ', $vout['scriptPubKey']['asm']);
+      if (CRAWLER_DEBUG) {
+        echo "could not read the block hash. waiting for reconnect.\n";
+      }
 
-          if($asmArray[0] == 'OP_KEVA_NAMESPACE' || $asmArray[0] == 'OP_KEVA_PUT') { // OP_KEVA_DELETE
+      break;
+    }
 
-            $hash      = Base58Check::encode($asmArray[1], false , 0 , false);
-            $nameSpace = $node->keva_get($hash, '_KEVA_NS_');
+    if (!$blockData = $kevaCoin->getblock($blockHash)) {
 
-            $nameSpaceValue = strip_tags(html_entity_decode($nameSpace['value'], ENT_QUOTES, 'UTF-8'));
+      if (CRAWLER_DEBUG) {
+        echo "could not read the block data. waiting for reconnect.\n";
+      }
 
-            if ((empty(KEVA_NS) || (!empty(KEVA_NS) && KEVA_NS == $nameSpaceValue))) {
+      break;
+    }
 
-               if (!$nameSpaceId = $db->getNameSpace($hash)) {
-                    $nameSpaceId = $db->addNameSpace($hash, $nameSpaceValue);
-               }
+    if (!$blockId = $db->getBlock($blockCurrent)) {
+         $blockId = $db->addBlock($blockCurrent);
 
-               if (!$db->getData($blockId, $nameSpaceId)) {
-                    $db->addData($blockId,
-                                 $nameSpaceId,
-                                 $transactionRaw['time'],
-                                 $transactionRaw['size'],
-                                 $transactionRaw['txid'],
-                                 strip_tags(html_entity_decode(@hex2bin($asmArray[2]), ENT_QUOTES, 'UTF-8')),
-                                 strip_tags(html_entity_decode(@hex2bin($asmArray[3]), ENT_QUOTES, 'UTF-8')));
-               }
+         if (CRAWLER_DEBUG) {
+           echo sprintf("add block %s\n", $blockCurrent);
+         }
+    }
+
+    $lostTransactions = 0;
+
+    foreach ($blockData['tx'] as $transaction) {
+
+      if (!$transactionRaw = $kevaCoin->getrawtransaction($transaction)) {
+
+        $lostTransactions++;
+
+        $db->setLostTransactions($blockId, $lostTransactions);
+
+        if (CRAWLER_DEBUG) {
+          echo sprintf("could not read the transaction %s. skipped.\n", $transaction);
+        }
+
+        break;
+      }
+
+      foreach($transactionRaw['vout'] as $vout) {
+
+        $asmArray = explode(' ', $vout['scriptPubKey']['asm']);
+
+        if (in_array($asmArray[0], ['OP_KEVA_NAMESPACE', 'OP_KEVA_PUT', 'OP_KEVA_DELETE'])) {
+
+          $hash = Base58Check::encode($asmArray[1], false , 0 , false);
+
+          switch ($asmArray[0]) {
+
+            case 'OP_KEVA_DELETE':
+
+              $key   = filterString(decodeString($asmArray[2]));
+              $value = '';
+
+            break;
+
+            case 'OP_KEVA_NAMESPACE':
+
+              $key   = '_KEVA_NS_';
+              $value = filterString(decodeString($asmArray[2]));
+
+            break;
+
+            default:
+
+              $key   = filterString(decodeString($asmArray[2]));
+              $value = filterString(decodeString($asmArray[3]));
+          }
+
+          if (!$nameSpaceId = $db->getNameSpace($hash)) {
+               $nameSpaceId = $db->addNameSpace($hash);
 
                if (CRAWLER_DEBUG) {
-                 $response[] = [
-                   'blocktotal'=> $blockTotal,
-                   'block'     => $blockCurrent,
-                   'blockhash' => $transactionRaw['blockhash'],
-                   'txid'      => $transactionRaw['txid'],
-                   'version'   => $transactionRaw['version'],
-                   'size'      => $transactionRaw['size'],
-                   'time'      => $transactionRaw['time'],
-                   'blocktime' => $transactionRaw['blocktime'],
-                   'namehash'  => $hash,
-                   'title'     => $nameSpaceValue,
-                   'key'       => strip_tags(html_entity_decode(@hex2bin($asmArray[2]), ENT_QUOTES, 'UTF-8')),
-                   'vale'      => strip_tags(html_entity_decode(@hex2bin($asmArray[3]), ENT_QUOTES, 'UTF-8'))
-                 ];
+                 echo sprintf("add namespace %s\n", $hash);
                }
+          }
+
+          if (!$dataId = $db->getData($transactionRaw['txid'])) {
+               $dataId = $db->addData($blockId,
+                                      $nameSpaceId,
+                                      $transactionRaw['time'],
+                                      $transactionRaw['size'],
+                                      $transactionRaw['txid'],
+                                      $key,
+                                      $value,
+                                      ($key == '_KEVA_NS_'),
+                                      empty($value));
+
+            if ($value) {
+
+              $db->setDataKeyDeleted($nameSpaceId, $key, false);
+
+              if (CRAWLER_DEBUG) {
+                echo sprintf("add new key/value %s\n", $transactionRaw['txid']);
+              }
+
+            } else {
+
+              $db->setDataKeyDeleted($nameSpaceId, $key, true);
+
+              if (CRAWLER_DEBUG) {
+                echo sprintf("delete key %s from namespace %s\n", $key, $hash);
+              }
             }
+          }
+
+          if (CRAWLER_DEBUG) {
+            $response[] = [
+              'blocktotal'=> $blockTotal,
+              'block'     => $blockCurrent,
+              'blockhash' => $transactionRaw['blockhash'],
+              'txid'      => $transactionRaw['txid'],
+              'version'   => $transactionRaw['version'],
+              'size'      => $transactionRaw['size'],
+              'time'      => $transactionRaw['time'],
+              'blocktime' => $transactionRaw['blocktime'],
+              'namehash'  => $hash,
+              'key'       => $key,
+              'value'     => $value
+            ];
           }
         }
       }
-
-    } else {
-
-      // @TODO block not found
     }
   }
-}
 
-// Debug
-if (CRAWLER_DEBUG) {
-  print_r($response);
+
+  // Debug
+  if (CRAWLER_DEBUG) {
+    echo "scanning completed.\n";
+    # print_r($response);
+  }
+
+  sem_release($semaphore);
+
+} else {
+  echo "database locked by the another process...\n";
 }

@@ -5,7 +5,7 @@ $semaphore = sem_get(1);
 if (false !== sem_acquire($semaphore, 1)) {
 
   require_once('config.php');
-  require_once('library/mysql.php');
+  require_once('library/sqlite.php');
   require_once('library/kevacoin.php');
   require_once('library/hash.php');
   require_once('library/base58.php');
@@ -13,7 +13,7 @@ if (false !== sem_acquire($semaphore, 1)) {
   require_once('library/crypto.php');
   require_once('library/helper.php');
 
-  $db       = new MySQL(DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD);
+  $db       = new SQLite(DB_NAME, DB_USERNAME, DB_PASSWORD);
   $kevaCoin = new KevaCoin(KEVA_PROTOCOL, KEVA_HOST, KEVA_PORT, KEVA_USERNAME, KEVA_PASSWORD);
 
   $blockLast  = $db->getLastBlock();

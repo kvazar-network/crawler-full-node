@@ -1,12 +1,12 @@
 <?php
 
-class MySQL {
-  
-  public function __construct($host, $port, $database, $username, $password) {
+class SQLite {
+
+  public function __construct($database, $username, $password) {
 
     try {
 
-      $this->_db = new PDO('mysql:dbname=' . $database . ';host=' . $host . ';port=' . $port . ';charset=utf8', $username, $password, [PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8']);
+      $this->_db = new PDO('sqlite:' . $database, $username, $password, [PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8']);
       $this->_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
       $this->_db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
       $this->_db->setAttribute(PDO::ATTR_TIMEOUT, 600);
@@ -38,7 +38,9 @@ class MySQL {
 
       $query->execute([$blockId]);
 
-      return $query->rowCount() ? $query->fetch()['blockId'] : false;
+      $result = $query->fetch();
+
+      return $result ? $result['blockId'] : false;
 
     } catch(PDOException $e) {
       trigger_error($e->getMessage());
@@ -54,7 +56,9 @@ class MySQL {
 
       $query->execute([$hash]);
 
-      return $query->rowCount() ? $query->fetch()['nameSpaceId'] : false;
+      $result = $query->fetch();
+
+      return $result ? $result['nameSpaceId'] : false;
 
     } catch(PDOException $e) {
       trigger_error($e->getMessage());
@@ -70,7 +74,9 @@ class MySQL {
 
       $query->execute([$txId]);
 
-      return $query->rowCount() ? $query->fetch()['dataId'] : false;
+      $result = $query->fetch();
+
+      return $result ? $result['dataId'] : false;
 
     } catch(PDOException $e) {
       trigger_error($e->getMessage());
@@ -82,11 +88,10 @@ class MySQL {
 
     try {
 
-      $query = $this->_db->prepare('INSERT INTO `block` SET `blockId`          = ?,
-                                                            `lostTransactions` = 0,
-                                                            `timeIndexed`      = UNIX_TIMESTAMP()');
+      $query = $this->_db->prepare('INSERT INTO `block` (`blockId`, `lostTransactions`, `timeIndexed`)
+                                           VALUES (?, 0, ?)');
 
-      $query->execute([$blockId]);
+      $query->execute([$blockId, time()]);
 
       return $blockId;
 
@@ -116,10 +121,10 @@ class MySQL {
 
     try {
 
-      $query = $this->_db->prepare('INSERT INTO `namespace` SET `hash`  = ?,
-                                                                `timeIndexed` = UNIX_TIMESTAMP()');
+      $query = $this->_db->prepare('INSERT INTO `namespace` (`hash`, `timeIndexed`)
+                                           VALUES (?, ?)');
 
-      $query->execute([$hash]);
+      $query->execute([$hash, time()]);
 
       return $this->_db->lastInsertId();
 
@@ -133,16 +138,35 @@ class MySQL {
 
     try {
 
-      $query = $this->_db->prepare('INSERT INTO `data` SET `blockId`     = :blockId,
-                                                           `nameSpaceId` = :nameSpaceId,
-                                                           `time`        = :time,
-                                                           `size`        = :size,
-                                                           `txid`        = :txid,
-                                                           `key`         = :key,
-                                                           `value`       = :value,
-                                                           `deleted`     = :deleted,
-                                                           `ns`          = :ns,
-                                                           `timeIndexed` = UNIX_TIMESTAMP()');
+      $query = $this->_db->prepare('INSERT INTO `data` (
+
+                                                        `blockId`,
+                                                        `nameSpaceId`,
+                                                        `time`,
+                                                        `size`,
+                                                        `txid`,
+                                                        `key`,
+                                                        `value`,
+                                                        `deleted`,
+                                                        `ns`,
+                                                        `timeIndexed`
+
+                                                       )
+
+                                           VALUES (
+
+                                                   :blockId,
+                                                   :nameSpaceId,
+                                                   :time,
+                                                   :size,
+                                                   :txid,
+                                                   :key,
+                                                   :value,
+                                                   :deleted,
+                                                   :ns,
+                                                   :timeIndexed
+
+                                                  )');
 
       $query->bindValue(':blockId', $blockId, PDO::PARAM_INT);
       $query->bindValue(':nameSpaceId', $nameSpaceId, PDO::PARAM_INT);
@@ -153,6 +177,7 @@ class MySQL {
       $query->bindValue(':value', $value, PDO::PARAM_STR);
       $query->bindValue(':deleted', (int) $deleted, PDO::PARAM_STR);
       $query->bindValue(':ns', (int) $ns, PDO::PARAM_STR);
+      $query->bindValue(':timeIndexed', time(), PDO::PARAM_INT);
 
       $query->execute();
 

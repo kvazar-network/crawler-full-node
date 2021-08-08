@@ -10,9 +10,7 @@ define('STEP_BLOCK_LIMIT', 50);  // Blocks per query
 define('CRAWLER_DEBUG', true);   // Debug output
 
 // Database
-define('DB_HOST', '127.0.0.1');
-define('DB_PORT', '3306');
-define('DB_NAME', '');
+define('DB_NAME', 'kvazar.dat');
 define('DB_USERNAME', '');
 define('DB_PASSWORD', '');
 

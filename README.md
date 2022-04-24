@@ -9,7 +9,7 @@ php-mysql
 php-bcmath
 ```
 
-#### database:
+#### database
 
 https://github.com/kvazar-network/database
 

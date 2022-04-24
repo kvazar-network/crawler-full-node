@@ -34,4 +34,5 @@ whitelist=127.0.0.1
 ```
 @reboot /path-to/kevacoind > /dev/null 2>&1
 * * * * * /path-to/kevacoind > /dev/null 2>&1
+* * * * * /path-to/php /path-to/crawler-full-node/crawler.php
 ```

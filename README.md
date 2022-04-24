@@ -32,6 +32,6 @@ whitelist=127.0.0.1
 
 #### crontab
 ```
-@reboot /path-to/kevacoind -daemon > /dev/null 2>&1
-* * * * * /path-to/kevacoind -daemon > /dev/null 2>&1
+@reboot /path-to/kevacoind > /dev/null 2>&1
+* * * * * /path-to/kevacoind > /dev/null 2>&1
 ```

@@ -19,7 +19,7 @@ if (false !== sem_acquire($semaphore, 1)) {
   $blockLast  = $db->getLastBlock();
   $blockTotal = $kevaCoin->getblockcount();
 
-  if (!$blockTotal) {
+  if (false === $blockTotal) {
     echo "API connection error.\n";
     exit;
   }

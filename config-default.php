@@ -10,7 +10,7 @@ define('STEP_BLOCK_LIMIT', 50);  // Blocks per query
 define('CRAWLER_DEBUG', true);   // Debug output
 
 // Database
-define('DB_NAME', 'kvazar.dat');
+define('DB_NAME', 'kvazar.sqlite');
 define('DB_USERNAME', '');
 define('DB_PASSWORD', '');
 

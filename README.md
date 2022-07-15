@@ -2,7 +2,7 @@
 
 ### requirements
 ```
-php-8^
+php-7.4
 php-curl
 php-mbstring
 php-pdo

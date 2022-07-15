@@ -13,6 +13,14 @@ php-bcmath
 
 https://github.com/kvazar-network/database
 
+##### MySQL
+
+https://github.com/kvazar-network/database/tree/master
+
+##### SQLite
+
+https://github.com/kvazar-network/database/tree/sqlite
+
 #### kevacoind
 
 https://github.com/kevacoin-project/kevacoin

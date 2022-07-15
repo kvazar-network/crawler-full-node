@@ -16,11 +16,11 @@ https://github.com/kvazar-network/database
 
 ##### MySQL
 
-https://github.com/kvazar-network/database/tree/master
+https://github.com/kvazar-network/crawler-full-node/tree/master
 
 ##### SQLite
 
-https://github.com/kvazar-network/database/tree/sqlite
+https://github.com/kvazar-network/crawler-full-node/tree/sqlite
 
 #### kevacoind
 

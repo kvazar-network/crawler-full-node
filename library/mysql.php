@@ -1,7 +1,9 @@
 <?php
 
 class MySQL {
-  
+
+  private $_db;
+
   public function __construct($host, $port, $database, $username, $password) {
 
     try {

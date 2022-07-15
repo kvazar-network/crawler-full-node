@@ -2,11 +2,11 @@
 
 ### requirements
 ```
-php-7.4
+php-8^
 php-curl
 php-mbstring
 php-pdo
-php-sqlite
+php-sqlite3
 php-bcmath
 ```
 

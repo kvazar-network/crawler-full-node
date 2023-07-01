@@ -4,14 +4,14 @@ $semaphore = sem_get(1);
 
 if (false !== sem_acquire($semaphore, 1)) {
 
-  require_once('config.php');
-  require_once('library/sqlite.php');
-  require_once('library/kevacoin.php');
-  require_once('library/hash.php');
-  require_once('library/base58.php');
-  require_once('library/base58check.php');
-  require_once('library/crypto.php');
-  require_once('library/helper.php');
+  require_once(__DIR__ . '/config.php');
+  require_once(__DIR__ . '/library/sqlite.php');
+  require_once(__DIR__ . '/library/kevacoin.php');
+  require_once(__DIR__ . '/library/hash.php');
+  require_once(__DIR__ . '/library/base58.php');
+  require_once(__DIR__ . '/library/base58check.php');
+  require_once(__DIR__ . '/library/crypto.php');
+  require_once(__DIR__ . '/library/helper.php');
 
   $db       = new SQLite(DB_NAME, DB_USERNAME, DB_PASSWORD);
   $kevaCoin = new KevaCoin(KEVA_PROTOCOL, KEVA_HOST, KEVA_PORT, KEVA_USERNAME, KEVA_PASSWORD);

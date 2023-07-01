@@ -4,7 +4,7 @@ $semaphore = sem_get(crc32('kvazar-network.crawler_full_node'), 1);
 
 if (false === sem_acquire($semaphore, true)) {
 
-  echo "database locked by the another process...\n";
+  echo "database locked by the another process..." . PHP_EOL;
   exit;
 }
 
@@ -24,14 +24,14 @@ $blockLast  = $db->getLastBlock();
 $blockTotal = $kevaCoin->getblockcount();
 
 if (false === $blockTotal) {
-  echo "API connection error.\n";
+  echo "API connection error." . PHP_EOL;
   exit;
 }
 
 $response = [];
 
 if (CRAWLER_DEBUG) {
-  echo "scanning blockhain...\n";
+  echo "scanning blockhain..." . PHP_EOL;
 }
 
 for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_LIMIT; $blockCurrent++) {
@@ -39,20 +39,20 @@ for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_
   if ($blockCurrent > $blockTotal) {
 
     if (CRAWLER_DEBUG) {
-      echo "database is up to date.\n";
+      echo "database is up to date." . PHP_EOL;
     }
 
     break;
   }
 
   if (CRAWLER_DEBUG) {
-    echo sprintf("reading block %s\n", $blockCurrent);
+    echo sprintf("reading block %s", $blockCurrent) . PHP_EOL;
   }
 
   if (!$blockHash = $kevaCoin->getblockhash($blockCurrent)) {
 
     if (CRAWLER_DEBUG) {
-      echo "could not read the block hash. waiting for reconnect.\n";
+      echo "could not read the block hash. waiting for reconnect." . PHP_EOL;
     }
 
     break;
@@ -61,7 +61,7 @@ for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_
   if (!$blockData = $kevaCoin->getblock($blockHash)) {
 
     if (CRAWLER_DEBUG) {
-      echo "could not read the block data. waiting for reconnect.\n";
+      echo "could not read the block data. waiting for reconnect." . PHP_EOL;
     }
 
     break;
@@ -71,7 +71,7 @@ for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_
         $blockId = $db->addBlock($blockCurrent);
 
         if (CRAWLER_DEBUG) {
-          echo sprintf("add block %s\n", $blockCurrent);
+          echo sprintf("add block %s", $blockCurrent) . PHP_EOL;
         }
   }
 
@@ -86,7 +86,7 @@ for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_
       $db->setLostTransactions($blockId, $lostTransactions);
 
       if (CRAWLER_DEBUG) {
-        echo sprintf("could not read the transaction %s. skipped.\n", $transaction);
+        echo sprintf("could not read the transaction %s. skipped.", $transaction) . PHP_EOL;
       }
 
       break;
@@ -126,7 +126,7 @@ for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_
               $nameSpaceId = $db->addNameSpace($hash);
 
               if (CRAWLER_DEBUG) {
-                echo sprintf("add namespace %s\n", $hash);
+                echo sprintf("add namespace %s", $hash) . PHP_EOL;
               }
         }
 
@@ -146,7 +146,7 @@ for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_
             $db->setDataKeyDeleted($nameSpaceId, $key, false);
 
             if (CRAWLER_DEBUG) {
-              echo sprintf("add new key/value %s\n", $transactionRaw['txid']);
+              echo sprintf("add new key/value %s", $transactionRaw['txid']) . PHP_EOL;
             }
 
           } else {
@@ -154,7 +154,7 @@ for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_
             $db->setDataKeyDeleted($nameSpaceId, $key, true);
 
             if (CRAWLER_DEBUG) {
-              echo sprintf("delete key %s from namespace %s\n", $key, $hash);
+              echo sprintf("delete key %s from namespace %s", $key, $hash) . PHP_EOL;
             }
           }
         }
@@ -182,6 +182,6 @@ for ($blockCurrent = ($blockLast + 1); $blockCurrent <= $blockLast + STEP_BLOCK_
 
 // Debug
 if (CRAWLER_DEBUG) {
-  echo "scanning completed.\n";
+  echo "scanning completed." . PHP_EOL;
   # print_r($response);
 }
